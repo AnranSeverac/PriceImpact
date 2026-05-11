@@ -197,10 +197,14 @@
   \begin{columns}[T]
   \column{0.42\textwidth}
   \footnotesize
-  9-point grid $H \in \{5,10,20,30,45,60,90,120,180\}$\,min;\\
-  for each $(H,\text{model})$ run rolling OLS and average OOS $R^2$.
+  \textbf{Optimisation problem.} Joint $\max_{H,\alpha,\lambda} R^2_{\text{OOS}}(H,\alpha,\lambda)$.
+  For fixed $H$, OLS pins $(\hat\alpha,\hat\lambda)$ in closed form, so the problem reduces to a 1-D scan over $H$ -- the half-life that yields the best-fitting impact regression:
+  \[
+    \max_{H}\; R^2_{\text{OOS}}\!\bigl(H,\,\hat\alpha(H),\,\hat\lambda(H)\bigr).
+  \]
+  Grid: $H \in \{5,10,20,30,45,60,90,120,180\}$ min.
 
-  \vspace{0.5em}
+  \vspace{0.3em}
   \begin{tabular}{lcc}
   \toprule
   $H$ (min) & OW & AFS \\
@@ -209,18 +213,21 @@
   \textbf{45}  & 0.1582 & \textbf{0.2609} \\
   \textbf{60}  & \textbf{0.1583} & 0.2608 \\
   90  & 0.1581 & 0.2602 \\
-  120 & 0.1578 & 0.2595 \\
   \bottomrule
   \end{tabular}
-
-  \vspace{0.4em}
-  \good{$H^* = 52.5$ min} (midpoint).\\
-  Cost of universal $H^*$ vs per-model optimum: $<10^{-4}$.\\
-  AFS dominates OW by \hilite{${\sim}10$\,pp} in OOS $R^2$.
 
   \column{0.56\textwidth}
   \centering
   \includegraphics[width=\linewidth]{figures/halflife_grid_search.png}
+
+  \vspace{0.2em}
+  \footnotesize
+  \textbf{Why the midpoint?} \good{$H^* = 52.5$ min}.
+  \begin{itemize}
+    \item Per-model optima differ: OW peaks at 60, AFS at 45
+    \item Surface \hilite{flat in 45--60 min}: $<10^{-4}$ $R^2$ cost anywhere in band
+    \item Midpoint is model-agnostic; lets OW + AFS share bins + comparisons
+  \end{itemize}
   \end{columns}
 \end{frame}
 
