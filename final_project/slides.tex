@@ -56,45 +56,18 @@
 % ============================================================
 % 2. PIPELINE AT A GLANCE
 % ============================================================
-\begin{frame}{Pipeline at a glance}{Seven assignment sections, eight modules, two enhancements}
+\begin{frame}{Outline}{What we will cover}
 
-  \begin{columns}[T]
-  \column{0.52\textwidth}
-  \scriptsize
-  \textbf{Modules vs assignment sections}
-  \begin{tabular}{lll}
-  \toprule
-  Module & Responsibility & Section \\
-  \midrule
-  \texttt{data}          & top-$N$, $\sigma$/ADV    & \S2.1 \\
-  \texttt{impact\_states}& OU $\bar I$ (daily + multi) & \S2.2/\S2.3 \\
-  \texttt{fitting}       & OLS + NP + $H$-grid    & \S2.2 \\
-  \texttt{alpha}         & synthetic $\alpha$        & \S2.4 \\
-  \texttt{strategy}      & OW/AFS/ext-OW             & \S2.5 \\
-  \texttt{backtest}      & Waelbroeck sim            & \S2.3 \\
-  \texttt{results}       & metrics + TCA + plots     & \S2.6 \\
-  \texttt{runner}        & \texttt{BacktestConfig}$\to$disk & \S2.6/\S2.7 \\
-  \bottomrule
-  \end{tabular}
+  \begin{enumerate}
+    \item Data preparation \hfill \emph{\S2.1}
+    \item Impact model fitting: OW, AFS, non-parametric extension \hfill \emph{\S2.2}
+    \item Backtest engine (Waelbroeck simulator) \hfill \emph{\S2.3}
+    \item Synthetic alphas \hfill \emph{\S2.4}
+    \item Optimal trading strategy \hfill \emph{\S2.5}
+    \item Performance metrics and TCA decomposition \hfill \emph{\S2.6}
+    \item Sensitivity analysis and stress testing \hfill \emph{\S2.7}
+  \end{enumerate}
 
-  \column{0.46\textwidth}
-  \scriptsize
-  \textbf{Design principles}
-  \begin{itemize}
-    \item Single-responsibility modules; notebook is glue
-    \item Same simulator runs \hilite{any} signed trade path
-    \item Carry mode = one flag; downstream unchanged
-    \item Every run dumps tables + plots to \texttt{saved/<name>/}
-  \end{itemize}
-  \end{columns}
-
-  \vspace{0.6em}
-  \begin{center}
-  \footnotesize\textbf{Two enhancements emphasised:}\;\;
-  \hilite{NP impact} with cross-stock $\gamma$ shrinkage (\S2.2)\;\;$\bullet$\;\;
-  \hilite{Multi-day carry} backtest engine (\S2.3)\\[2pt]
-  \scriptsize\itshape Solo submission -- all sections by author.
-  \end{center}
 \end{frame}
 
 % ============================================================
