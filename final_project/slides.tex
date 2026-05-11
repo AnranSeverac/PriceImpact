@@ -147,86 +147,85 @@
 % ============================================================
 % 4. IMPACT-STATE RECURSION
 % ============================================================
-\begin{frame}{Impact-state recursion \hfill \emph{\S2.2}}{OW vs AFS, daily-reset vs multi-day $\bar I$}
+\begin{frame}{Impact-state recursion \hfill \emph{\S2.2}}{OW vs AFS -- different flow kernels, same decay}
 
   \begin{columns}[T]
-  \column{0.52\textwidth}
+  \column{0.50\textwidth}
   \footnotesize
   Both models build the OU recursion
   \[
     \bar I_{t+1} = (1-\beta)\bar I_t + \tilde q_t,
     \qquad \beta = \frac{\ln 2}{H_{\text{bins}}}.
   \]
-  They differ only in the kernel applied to raw flow:
+  They differ only in the \hilite{flow kernel} -- how a child trade of size $q_t$ pushes the state $\bar I$:
   \[
-    \text{\hilite{OW}:}\;\;\tilde q_t = \sigma\,q_t/\mathrm{ADV}
+    \text{\hilite{OW}:}\;\;\tilde q_t = \sigma\,q_t/\mathrm{ADV}\;\;(\text{linear})
   \]
   \[
-    \text{\hilite{AFS}:}\;\;\tilde q_t = \sigma\,\mathrm{sgn}(q_t)\sqrt{|q_t|/\mathrm{ADV}}
+    \text{\hilite{AFS}:}\;\;\tilde q_t = \sigma\,\mathrm{sgn}(q_t)\sqrt{|q_t|/\mathrm{ADV}}\;\;(\text{concave})
   \]
-  \vspace{-0.2em}
-  \scriptsize\itshape
-  The sqrt form is chosen so the model reproduces the empirical
-  meta-order law $\Delta P / P_0 \propto \sqrt{Q/V}$
-  (Almgren et al.; Bouchaud): a constant-rate parent of size $Q$
-  builds equilibrium $\bar I^* = f(Q/T)/\beta$, whose shape inherits
-  $f$. OW would predict linear-in-$Q$ impact, which the data rejects.
 
-  \vspace{0.2em}
-  \normalsize\upshape
-  \textbf{Two carry modes produced side-by-side}
-  \begin{itemize}
-    \item \texttt{I\_bar\_daily} -- reset at each session
-    \item \texttt{I\_bar\_multi} -- carry with overnight decay $(1-\beta)^{16\text{h}\cdot 6}$
-  \end{itemize}
+  \vspace{0.4em}
+  \textbf{Why AFS is interesting.}
+  The model lets us \emph{specify} the flow kernel $f(q)$ rather than inheriting the linear form by default. We pick the sqrt because it lines up with the empirical $\sqrt{Q/V}$ meta-order law -- mechanism explored on \emph{slide 9} (Backtest engine), where the kernel choice becomes the operative modelling decision.
 
-  \column{0.46\textwidth}
-  \centering
-  \includegraphics[width=\linewidth]{figures/ibar_daily_vs_multi.png}
+  \column{0.48\textwidth}
+  \footnotesize
+  \textbf{Optimisation problem.} Joint
+  \[
+    \max_{H,\,\alpha,\,\lambda}\; R^2_{\text{OOS}}\!\bigl(H,\alpha,\lambda\bigr).
+  \]
+  For fixed $H$, OLS pins $(\hat\alpha,\hat\lambda)$ in closed form, so the problem reduces to a \hilite{1-D scan over $H$} -- the half-life that yields the best-fitting impact regression:
+  \[
+    \max_{H}\; R^2_{\text{OOS}}\!\bigl(H,\,\hat\alpha(H),\,\hat\lambda(H)\bigr).
+  \]
 
-  \footnotesize\itshape
-  At $H=60$\,min the overnight decay $(1-\beta)^{5760} \approx 10^{-5}$ already wipes $\bar I$, so the two curves overlap on screen. The flag still matters for the backtest because \hilite{inventory} carries even when $\bar I$ does not.
+  \vspace{0.4em}
+  \textbf{Regression target.} At horizon $\tau = 6$ bins (60\,s),
+  \[
+    y_t = \alpha + \lambda\,x_t + \varepsilon_t,
+  \]
+  with $x_t = \bar I_t - \bar I_{t-\tau}$, $y_t = (P_t - P_{t-\tau})/P_{t-\tau}$. Fit via additive sufficient statistics $(S_x, S_y, S_{xx}, S_{yy}, S_{xy}, n)$ -- enables fast rolling re-fits and the $H$-grid sweep on the next slide.
   \end{columns}
 \end{frame}
 
 % ============================================================
 % 5. HALF-LIFE GRID SEARCH
 % ============================================================
-\begin{frame}{Half-life grid search \hfill \emph{\S2.2}}{Empirical $H$ via rolling-OOS sweep}
+\begin{frame}{Half-life grid search \hfill \emph{\S2.2}}{$H$ is a market property, not a model parameter}
 
   \begin{columns}[T]
-  \column{0.42\textwidth}
-  \footnotesize
-  \textbf{Optimisation problem.} Joint $\max_{H,\alpha,\lambda} R^2_{\text{OOS}}(H,\alpha,\lambda)$.
-  For fixed $H$, OLS pins $(\hat\alpha,\hat\lambda)$ in closed form, so the problem reduces to a 1-D scan over $H$ -- the half-life that yields the best-fitting impact regression:
-  \[
-    \max_{H}\; R^2_{\text{OOS}}\!\bigl(H,\,\hat\alpha(H),\,\hat\lambda(H)\bigr).
-  \]
-  Grid: $H \in \{5,10,20,30,45,60,90,120,180\}$ min.
+  \column{0.38\textwidth}
+  \scriptsize
+  Mean OOS $R^2$ over $H \in \{5,10,20,30,45,60,90,120,180\}$ min:
 
   \vspace{0.3em}
   \begin{tabular}{lcc}
   \toprule
   $H$ (min) & OW & AFS \\
   \midrule
+  10  & 0.1530 & 0.2525 \\
   30  & 0.1579 & 0.2604 \\
   \textbf{45}  & 0.1582 & \textbf{0.2609} \\
   \textbf{60}  & \textbf{0.1583} & 0.2608 \\
   90  & 0.1581 & 0.2602 \\
+  120 & 0.1578 & 0.2595 \\
   \bottomrule
   \end{tabular}
 
-  \column{0.56\textwidth}
+  \vspace{0.4em}
+  OW peaks at $H{=}60$, AFS at $H{=}45$ -- but not separate truths.
+
+  \column{0.60\textwidth}
   \centering
   \includegraphics[width=\linewidth]{figures/halflife_grid_search.png}
 
   \vspace{0.2em}
   \footnotesize
-  \textbf{Why the midpoint?} \good{$H^* = 52.5$ min}.
+  \textbf{Why the midpoint? \good{$H^* = 52.5$ min}}
   \begin{itemize}
-    \item Per-model optima differ: OW peaks at 60, AFS at 45
-    \item Surface \hilite{flat in 45--60 min}: $<10^{-4}$ $R^2$ cost anywhere in band
-    \item Midpoint is model-agnostic; lets OW + AFS share bins + comparisons
+    \item $H$ is a \hilite{market property} -- liquidity recovery rate. It should not depend on whether \emph{we} model with OW or AFS flow
+    \item Cross-model agreement is the test: both prefer 45--60 min within $<10^{-4}$ $R^2$. Midpoint is the natural single estimate of one universal market parameter
   \end{itemize}
   \end{columns}
 \end{frame}
@@ -234,67 +233,85 @@
 % ============================================================
 % 6. NON-PARAMETRIC + GAMMA SHRINKAGE
 % ============================================================
-\begin{frame}{Non-parametric extension + $\gamma$ shrinkage \hfill \warn{ENHANCEMENT \#1}}{Method + regime-correctness stress}
+\begin{frame}{Non-parametric extension \hfill \warn{ENHANCEMENT \#1}}{Method + estimated functional form}
 
   \begin{columns}[T]
-  \column{0.42\textwidth}
+  \column{0.40\textwidth}
   \footnotesize
-  Replace $y = \alpha + \lambda x$ with a binned $g(x)$:
+  Replace the parametric $y = \alpha + \lambda x$ with a binned $g(x)$, applied to \emph{both} OW and AFS (same procedure, different $x_t = \Delta\bar I$):
   \[
     g_{i,b}^{\mathrm{reg}}(\gamma)
-    = \frac{S_{y,i,b} + \gamma\,\bar g_b}{n_{i,b}+\gamma}
+    \;=\; \frac{S_{y,i,b} + \gamma\,\bar g_b}{n_{i,b}+\gamma}.
   \]
   \begin{itemize}
-    \item $B=15$ quantile bins on train month $m$ (pooled across stocks)
-    \item $\bar g_b$ = pooled universal curve
-    \item \hilite{$\gamma$ tuned on test month $m{+}1$} (MSE), validated on $m{+}2$
+    \item $B = 15$ quantile bins on train month $m$ (pooled across stocks)
+    \item $\bar g_b$ = pooled universal curve across all stocks
+    \item Per-stock $\hat g_{i,b}$ shrunk toward $\bar g_b$ with strength $\gamma$
+    \item $\gamma$ tuned on test month $m{+}1$, validated on $m{+}2$
   \end{itemize}
 
-  \vspace{0.3em}
-  \textbf{Why three samples?}
-  Tuning $\gamma$ on the validation month leaks. We need \emph{train, tune, validate} -- distinct months, in order.
-
-  \vspace{0.3em}
-  \begin{sigbox}
-  rolling\_nonparametric(features,\\
-  \hspace*{1.5em}n\_bins=15, n\_windows=10)\\
-  \hspace*{0.5em}$\to$ (summary DF, fits dict)
-  \end{sigbox}
-
-  \column{0.56\textwidth}
-  \footnotesize
-  \textbf{Regime-correctness stress.} Headline ($n \approx 3000$/cell): tuning curves are flat $\Rightarrow$ shrinkage has nothing to fix. Stress: shrink train window 1\,mo $\to$ 5\,d $\to$ 2\,d so per-cell $n$ drops 10$\times$.
-
-  \vspace{0.2em}
+  \column{0.58\textwidth}
   \centering
-  \includegraphics[width=0.98\linewidth]{figures/stress6b_tuning_progression.png}
-
-  \vspace{0.2em}
-  \begin{tabular}{lccc}
-  \toprule
-  Train & Med.\,$n$ & OW gain (reg$-$raw) & $\gamma^*/n$ \\
-  \midrule
-  1 month & ${\sim}3\,000$ & $+0.0005$ & 0.16 \\
-  5 days  & ${\sim}\,720$  & $+0.0025$ & 0.56 \\
-  2 days  & ${\sim}\,290$  & \good{$+0.0070$} & \good{0.93} \\
-  \bottomrule
-  \end{tabular}
+  \includegraphics[width=\linewidth]{figures/impact_curves.png}
 
   \vspace{0.2em}
   \footnotesize\itshape
-  OOS gain grows ${\sim}14\times$ as data shrinks ${\sim}10\times$; shrinkage strength rises 6$\times$. The estimator is \hilite{regime-correct}: trusts per-stock data when there is plenty, pools toward universal when starved.
+  Estimated $g(x)$ at train month $m{=}3$. Grey: per-stock $\hat g_i(\cdot)$; dashed: universal $\bar g(\cdot)$.\\[2pt]
+  Left (\hilite{OW}, $x = \sigma\Delta\bar I_{\text{lin}}$): curves cluster around an approximately linear shape -- but the model forces linearity, so the question is how much that constraint costs.\\[2pt]
+  Right (\hilite{AFS}, $x = \sigma\Delta\bar I_{\text{sqrt}}$): curves are visibly \hilite{concave}, consistent with the empirical square-root impact regularity.
   \end{columns}
 \end{frame}
 
 % ============================================================
-% 7. HEADLINE OOS R²
+% 7. NEW -- GAMMA REGIME-CORRECTNESS
 % ============================================================
-\begin{frame}{Headline OOS $R^2$ \hfill \emph{\S2.2}}{Apples-to-apples comparison + estimated impact curves}
+\begin{frame}{$\gamma$ regularisation -- regime-correctness}{Flat in our data; kicks in for shorter training windows}
 
   \begin{columns}[T]
-  \column{0.46\textwidth}
+  \column{0.50\textwidth}
+  \centering
+  \scriptsize \textbf{Headline (1 month, ${\sim}3000$ obs/cell)}\\[2pt]
+  \includegraphics[width=\linewidth]{figures/gamma_tuning_curves.png}
+
+  \vspace{0.2em}
+  \footnotesize\itshape
+  Test-month MSE vs $\gamma$, across multiple windows. Curves \warn{flat across 6 orders of magnitude} -- per-stock estimators are already precise; shrinkage has nothing to fix.
+
+  \column{0.50\textwidth}
+  \centering
+  \scriptsize \textbf{Stress (train window 1\,mo $\to$ 5\,d $\to$ 2\,d)}\\[2pt]
+  \includegraphics[width=\linewidth]{figures/stress6b_tuning_progression.png}
+
+  \vspace{0.2em}
+  \scriptsize
+  \begin{tabular}{lccc}
+  \toprule
+  Train window & Med.\,$n$ & OW gain & $\gamma^*/n$ \\
+  \midrule
+  1 month     & ${\sim}3\,000$ & $+0.0005$ & 0.16 \\
+  5 days      & ${\sim}\,720$  & $+0.0025$ & 0.56 \\
+  2 days      & ${\sim}\,290$  & \good{$+0.0070$} & \good{0.93} \\
+  \bottomrule
+  \end{tabular}
+  \end{columns}
+
+  \vspace{0.4em}
+  \centering
+  \footnotesize\itshape
+  Estimator is \hilite{regime-correct}: trusts per-stock data when there's plenty, pools toward universal when starved.
+  OOS gain grows ${\sim}14\times$ as data shrinks ${\sim}10\times$; shrinkage strength rises 6$\times$.
+  Headline flatness is a property of the data-rich regime, not a defect.
+\end{frame}
+
+% ============================================================
+% 8. HEADLINE OOS R² (was 7)
+% ============================================================
+\begin{frame}{Headline OOS $R^2$ -- results \hfill \emph{\S2.2}}{Apples-to-apples comparison of parametric vs non-parametric}
+
+  \begin{columns}[T]
+  \column{0.44\textwidth}
   \footnotesize
-  \textbf{Pooled OOS $R^2$ (panel-wide null, same merged subset)}
+  \textbf{Pooled OOS $R^2$} (panel-wide null, same merged subset)
 
   \vspace{0.3em}
   \begin{tabular}{lccc}
@@ -306,68 +323,65 @@
   \bottomrule
   \end{tabular}
 
-  \vspace{0.6em}
+  \vspace{0.7em}
   \textbf{Two findings}
   \begin{itemize}
     \item \hilite{NP lifts OW by $+5.9$\,pp} -- linearity is a binding constraint
     \item \hilite{NP ties AFS} ($-0.6$\,pp): the 1-parameter sqrt form sits on the efficient frontier; 15 parameters buy nothing
   \end{itemize}
 
-  \vspace{0.3em}
+  \vspace{0.5em}
   \footnotesize\itshape
   Aggregation matters: under per-stock $R^2$ averaging, NP appears to beat AFS by $+0.2$\,pp -- an artefact that disappears under pooled $R^2$.
 
-  \column{0.52\textwidth}
+  \column{0.54\textwidth}
   \centering
-  \includegraphics[width=0.92\linewidth]{figures/parametric_vs_nonparametric.png}\\[2pt]
-  {\scriptsize OOS $R^2$: parametric OLS vs NP estimators}
+  \includegraphics[width=\linewidth]{figures/parametric_vs_nonparametric.png}
 
-  \vspace{0.5em}
-  \includegraphics[width=0.92\linewidth]{figures/impact_curves.png}\\[2pt]
-  {\scriptsize\itshape Per-stock $\hat g_i$ (grey) cluster tightly around universal $\bar g$ (dashed); AFS shows concavity.}
+  \vspace{0.3em}
+  \footnotesize\itshape
+  Mean OOS $R^2$ across rolling windows, by model and estimator. AFS dominates OW in every estimator family.
   \end{columns}
 \end{frame}
 
 % ============================================================
 % 8. BACKTEST ENGINE
 % ============================================================
-\begin{frame}{Backtest engine \hfill \warn{\S2.3 -- ENHANCEMENT \#2}}{Waelbroeck + carry modes + generic-trade interface}
+\begin{frame}{Backtest engine \hfill \warn{\S2.3 -- ENHANCEMENT \#2}}{Waelbroeck + AFS sqrt as the explicit modelling choice + carry modes}
 
   \[
     P_{\text{sim}}(t) = P_0\bigl(1 + \mathrm{cumret}(t) + g_{\text{sim}}(t) - g_{\text{ref}}(t)\bigr),
-    \quad g(t) = \lambda\,\bar I(t)\;\;\text{or}\;\;\lambda(t)\,\bar I(t)
+    \quad g(t) = \lambda\,\bar I(t)
   \]
-  $\bar I^{\text{ref}}$ uses public-tape \texttt{orderFlow}; $\bar I^{\text{sim}}$ uses the simulator's input trade path.
+  $\bar I^{\text{ref}}$ uses public-tape \texttt{orderFlow}; $\bar I^{\text{sim}}$ uses the engine's input trade path.
 
   \begin{columns}[T]
-  \column{0.5\textwidth}
+  \column{0.52\textwidth}
   \footnotesize
-  \textbf{Generic trades.}
-  Engine accepts any signed schedule via a \texttt{trade\_provider} callable:
+  \textbf{Modelling choice: why AFS sqrt?} A constant-rate parent of size $Q$ over $T$ drives the OU recursion to equilibrium $\bar I^* = f(Q/T)/\beta$, so
+  \[
+    \frac{\Delta P}{P_0} \;\propto\; f(Q/T).
+  \]
+  The kernel's shape \emph{propagates directly} to the parent (decay is linear -- $1/\beta$ rescale, not reshape):
   \begin{itemize}
-    \item \texttt{make\_optimal\_provider(strategy\_fn)} -- OW/AFS
-    \item \texttt{make\_fixed\_provider(trades)} -- TWAP/VWAP/manual
+    \item \warn{OW} ($f = q$): $\Delta P \propto Q/V$ -- linear in size
+    \item \good{AFS} ($f = \sqrt{q}$): $\Delta P \propto \sqrt{Q/V}$ -- the empirical \hilite{Almgren / Bouchaud law}
   \end{itemize}
+  Picking AFS at the engine level wires the empirical regularity in by construction.
+
+  \column{0.46\textwidth}
+  \footnotesize
+  \textbf{Generic trades.} Engine accepts any signed schedule via \texttt{trade\_provider}: \texttt{make\_optimal\_provider} (OW/AFS) and \texttt{make\_fixed\_provider} (TWAP/VWAP/manual).
+
+  \vspace{0.3em}
   \textbf{Carry modes.}
   \begin{itemize}
-    \item \texttt{daily} -- reset $\bar I$ + inventory each session (baseline)
-    \item \texttt{multi} -- persist across sessions, overnight decay $(1-\beta)^{16\text{h}\cdot 6}$
+    \item \texttt{daily} -- reset $\bar I$ + inventory each session
+    \item \texttt{multi} -- persist with overnight decay $(1-\beta)^{16\text{h}\cdot 6}$ on $\bar I$; \hilite{inventory carries regardless}
   \end{itemize}
 
-  \column{0.5\textwidth}
-  \footnotesize
-  \textbf{Stock splits.}
-  Heuristic detector flags $|\Delta p|$, $|\Delta v|$ large + opposite-signed with stable notional.
-  On 2019 top-20: \warn{no splits detected};
-  engine accepts \texttt{exclude\_stocks} for hard-coded exclusion.
-
-  \vspace{0.5em}
-  \begin{sigbox}
-  run\_backtest(merged, model, trade\_provider,\\
-  \hspace*{1.5em}daily\_stats, carry='daily'|'multi',\\
-  \hspace*{1.5em}overnight\_minutes=16*60)\\
-  \hspace*{0.5em}$\to$ BacktestResult
-  \end{sigbox}
+  \vspace{0.3em}
+  \textbf{Stock splits.} Heuristic detector flags $|\Delta p|$, $|\Delta v|$ opposite-signed + stable notional. 2019 top-20: \warn{none detected}.
   \end{columns}
 \end{frame}
 
