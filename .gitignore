@@ -2,3 +2,13 @@ data/
 .DS_Store
 *.pyc
 __pycache__/
+
+# Large replication snapshot (~465 MB; exceeds GitHub 100 MB limit).
+_replicate_state.pkl
+
+# LaTeX build artefacts.
+*.aux
+*.log
+*.out
+*.toc
+*.synctex.gz

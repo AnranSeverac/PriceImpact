@@ -99,6 +99,60 @@ def decay_factor_overnight(
     return float(decay**n_bins)
 
 
+def compute_normalized_impact_states_multi_day(
+    data,
+    daily_stats,
+    half_life_minutes: float,
+    model_type: ModelType = "linear",
+    overnight_minutes: float = 16.0 * 60.0,
+    stock_col: str = "stock",
+    date_col: str = "date",
+    time_col: str = "time",
+    order_flow_col: str = "orderFlow",
+):
+    """
+    Compute normalized impact state `I_bar` for each bin but carry the end-of-day
+    state across days with overnight decay.
+
+    This mirrors the recursion used elsewhere in this module and returns a
+    DataFrame with columns `[stock, date, time, I_bar, q_tilde]` aligned to
+    the input `data` rows (rows without matching `daily_stats` are dropped).
+    """
+
+    df = data[[stock_col, date_col, time_col, order_flow_col]].copy()
+    df = df.merge(
+        daily_stats[["sigma", "ADV"]].reset_index(),
+        on=[stock_col, date_col],
+        how="inner",
+    )
+
+    # prepare output columns
+    df = df.sort_values([stock_col, date_col, time_col])
+    df["q_tilde"] = 0.0
+    df["I_bar"] = 0.0
+
+    # iterate by stock then by date, carrying the last I_bar across days with overnight decay
+    for stock, g_stock in df.groupby(stock_col, sort=False):
+        i_bar = 0.0
+        for date, g_day in g_stock.groupby(date_col, sort=False):
+            gg = g_day.sort_values(time_col)
+            sigma = float(gg["sigma"].iat[0])
+            adv = float(gg["ADV"].iat[0])
+
+            q = gg[order_flow_col].to_numpy(dtype=float)
+            qt = q_tilde_series(q, sigma, adv, model_type)
+            i_day = impact_state_ou(qt, half_life_minutes, i_bar0=i_bar)
+
+            df.loc[gg.index, "q_tilde"] = qt
+            df.loc[gg.index, "I_bar"] = i_day
+
+            # carry to next session with overnight decay
+            ovn = decay_factor_overnight(half_life_minutes, overnight_minutes)
+            i_bar = float(i_day[-1]) * ovn if len(i_day) else i_bar * ovn
+
+    return df[[stock_col, date_col, time_col, "I_bar", "q_tilde"]]
+
+
 def waelbroeck_prices(
     mid: np.ndarray,
     q_reference: np.ndarray,
@@ -251,7 +305,6 @@ def detect_splits_from_daily(
 
 def build_daily_ohlcv_from_bins(bin_df: "pd.DataFrame"):
     """Last mid as close; sum |trade| as volume proxy for split detection."""
-    import pandas as pd  # type: ignore[import-not-found]
 
     df = bin_df.copy()
     if "trade" not in df.columns:
@@ -450,12 +503,24 @@ def multi_day_carry_from_bins(
                     "date": date,
                     "pnl": float(pnl),
                     "adv_est": float(adv_est),
-                    "end_position": float(position[-1]) if len(position) else float(state.position),
-                    "avg_abs_position": float(np.mean(np.abs(position))) if len(position) else 0.0,
-                    "i_bar_ref_end": float(i_ref[-1]) if len(i_ref) else float(state.i_bar_ref),
-                    "i_bar_sim_end": float(i_sim[-1]) if len(i_sim) else float(state.i_bar_sim),
-                    "max_abs_lam_i_ref": float(np.max(np.abs(lam * i_ref))) if len(i_ref) else 0.0,
-                    "max_abs_lam_i_sim": float(np.max(np.abs(lam * i_sim))) if len(i_sim) else 0.0,
+                    "end_position": float(position[-1])
+                    if len(position)
+                    else float(state.position),
+                    "avg_abs_position": float(np.mean(np.abs(position)))
+                    if len(position)
+                    else 0.0,
+                    "i_bar_ref_end": float(i_ref[-1])
+                    if len(i_ref)
+                    else float(state.i_bar_ref),
+                    "i_bar_sim_end": float(i_sim[-1])
+                    if len(i_sim)
+                    else float(state.i_bar_sim),
+                    "max_abs_lam_i_ref": float(np.max(np.abs(lam * i_ref)))
+                    if len(i_ref)
+                    else 0.0,
+                    "max_abs_lam_i_sim": float(np.max(np.abs(lam * i_sim)))
+                    if len(i_sim)
+                    else 0.0,
                     "sum_abs_qsim": float(np.sum(np.abs(q_sim))),
                     "gross_notional_proxy": float(np.sum(np.abs(q_sim) * mid)),
                 }
@@ -466,7 +531,9 @@ def multi_day_carry_from_bins(
             state = MultiDayState(
                 i_bar_ref=(float(i_ref[-1]) if len(i_ref) else state.i_bar_ref) * ovn,
                 i_bar_sim=(float(i_sim[-1]) if len(i_sim) else state.i_bar_sim) * ovn,
-                position=float(position[-1]) if len(position) else float(state.position),
+                position=float(position[-1])
+                if len(position)
+                else float(state.position),
             )
 
     return pd.DataFrame(rows)
@@ -487,4 +554,5 @@ __all__ = [
     "q_tilde_series",
     "stocks_to_exclude_from_splits",
     "waelbroeck_prices",
+    "compute_normalized_impact_states_multi_day",
 ]
