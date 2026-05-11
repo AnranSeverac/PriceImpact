@@ -234,10 +234,10 @@
 % ============================================================
 % 6. NON-PARAMETRIC + GAMMA SHRINKAGE
 % ============================================================
-\begin{frame}{Non-parametric extension + $\gamma$ shrinkage \hfill \warn{ENHANCEMENT \#1}}{Three-sample protocol; method recap}
+\begin{frame}{Non-parametric extension + $\gamma$ shrinkage \hfill \warn{ENHANCEMENT \#1}}{Method + regime-correctness stress}
 
   \begin{columns}[T]
-  \column{0.46\textwidth}
+  \column{0.42\textwidth}
   \footnotesize
   Replace $y = \alpha + \lambda x$ with a binned $g(x)$:
   \[
@@ -251,23 +251,38 @@
   \end{itemize}
 
   \vspace{0.3em}
-  \textbf{Why three samples?}\\
-  Tuning $\gamma$ on the validation month leaks. We need
-  \emph{train, tune, validate} -- distinct months, in order.
+  \textbf{Why three samples?}
+  Tuning $\gamma$ on the validation month leaks. We need \emph{train, tune, validate} -- distinct months, in order.
 
-  \vspace{0.4em}
+  \vspace{0.3em}
   \begin{sigbox}
   rolling\_nonparametric(features,\\
   \hspace*{1.5em}n\_bins=15, n\_windows=10)\\
   \hspace*{0.5em}$\to$ (summary DF, fits dict)
   \end{sigbox}
 
-  \column{0.52\textwidth}
-  \centering
-  \includegraphics[width=\linewidth]{figures/gamma_tuning_curves.png}
+  \column{0.56\textwidth}
+  \footnotesize
+  \textbf{Regime-correctness stress.} Headline ($n \approx 3000$/cell): tuning curves are flat $\Rightarrow$ shrinkage has nothing to fix. Stress: shrink train window 1\,mo $\to$ 5\,d $\to$ 2\,d so per-cell $n$ drops 10$\times$.
 
+  \vspace{0.2em}
+  \centering
+  \includegraphics[width=0.98\linewidth]{figures/stress6b_tuning_progression.png}
+
+  \vspace{0.2em}
+  \begin{tabular}{lccc}
+  \toprule
+  Train & Med.\,$n$ & OW gain (reg$-$raw) & $\gamma^*/n$ \\
+  \midrule
+  1 month & ${\sim}3\,000$ & $+0.0005$ & 0.16 \\
+  5 days  & ${\sim}\,720$  & $+0.0025$ & 0.56 \\
+  2 days  & ${\sim}\,290$  & \good{$+0.0070$} & \good{0.93} \\
+  \bottomrule
+  \end{tabular}
+
+  \vspace{0.2em}
   \footnotesize\itshape
-  Tuning curves flat across 6 orders of magnitude $\Rightarrow$ in the headline configuration (median $n \approx 3000$ per (stock, bin)) the per-stock estimator is already precise; shrinkage has nothing to fix. We'll see in \emph{slide 12} that the estimator behaves correctly when it does need to fix something.
+  OOS gain grows ${\sim}14\times$ as data shrinks ${\sim}10\times$; shrinkage strength rises 6$\times$. The estimator is \hilite{regime-correct}: trusts per-stock data when there is plenty, pools toward universal when starved.
   \end{columns}
 \end{frame}
 
@@ -456,46 +471,50 @@
 % ============================================================
 % 12. SENSITIVITY & STRESS
 % ============================================================
-\begin{frame}{Sensitivity \& stress \hfill \emph{\S2.7}}{Live backtest sweeps + fitting-side $\gamma$ stress}
+\begin{frame}{Sensitivity \& stress \hfill \emph{\S2.7}}{Live backtest sweeps + worked stress scenario}
 
   \begin{columns}[T]
-  \column{0.50\textwidth}
-  \footnotesize
+  \column{0.46\textwidth}
+  \scriptsize
   \textbf{Live sensitivity sweeps} (OW, daily-reset)
   \begin{tabular}{lrr}
   \toprule
   Scenario & Sharpe & Net P\&L \\
   \midrule
-  Baseline                  & \good{+4.30} & \$105k \\
-  Wrong model               & \warn{$-$3.48} & \warn{$-$\$863k} \\
-  Signal delayed 1\,min     & \warn{$-$0.32} & $-$\$8k \\
-  $\rho = 0.01$             & +0.45        & \$11k \\
-  $\rho = 0.10$             & \good{+9.22} & \$251k \\
-  $H = 30$ min              & +5.91        & \$205k \\
-  $H = 120$ min             & +3.26        & \$53k \\
+  Baseline                       & \good{+4.30} & \$105k \\
+  Wrong model (OW $\to$ AFS)     & \warn{$-$3.48} & \warn{$-$\$863k} \\
+  Signal delayed 1\,min          & \warn{$-$0.32} & $-$\$8k \\
+  $\rho = 0.01$                  & +0.45        & \$11k \\
+  $\rho = 0.10$                  & \good{+9.22} & \$251k \\
+  $H = 30$ min                   & +5.91        & \$205k \\
+  $H = 120$ min                  & +3.26        & \$53k \\
   \bottomrule
   \end{tabular}
 
   \vspace{0.3em}
-  \footnotesize
-  \warn{Wrong model is catastrophic} (negative Sharpe);
-  \warn{1-min delay flips the sign};
-  $\rho$ scales linearly; $H$ is forgiving.
+  \textbf{Takeaways}
+  \begin{itemize}
+    \item \warn{Wrong model catastrophic} -- $-\$863$k
+    \item \warn{1-min delay flips the sign} -- $\alpha$ is short-horizon
+    \item $\rho$ scales Sharpe linearly: $\{0.01, 0.05, 0.10\}\!\to\!\{0.45, 4.30, 9.22\}$
+    \item $H$ is forgiving: $\pm 2\times$ stays in $[+3.3, +5.9]$
+  \end{itemize}
 
-  \column{0.48\textwidth}
-  \footnotesize
-  \textbf{Fitting-side stress -- $\gamma$ regime-correctness}\\
-  Shrink train window $21\text{d}\to 5\text{d}\to 2\text{d}$, per-cell $n$ drops 10$\times$.\\
-  $\gamma^*/n$: $0.16 \to 0.56 \to \good{0.93}$.\\
-  OW gain (reg$-$raw): $0.0005 \to 0.0070$ ($\sim$14$\times$).
+  \column{0.52\textwidth}
+  \scriptsize
+  \textbf{Anatomy of the worst case.}
+  Fit OW $\hat\lambda$ on the panel, then trade as if impact were AFS (sqrt). Year-long net P\&L:
 
   \vspace{0.2em}
   \centering
-  \includegraphics[width=\linewidth]{figures/stress6b_tuning_progression.png}
+  \includegraphics[width=\linewidth]{figures/cum_pnl_wrong_model.png}
 
-  \vspace{0.2em}
+  \vspace{0.1em}
   \footnotesize\itshape
-  Headline flatness is data-rich behaviour, not a defect: the estimator correctly shrinks toward universal when starved.
+  Gross alpha-capture (orange dashed) still builds steadily -- the signal is real. But OW-sized positions under AFS impact pay \warn{${\sim}\$995$k} in impact cost, dwarfing gross P\&L. Net (blue) collapses early.
+
+  \vspace{0.1em}
+  $\Rightarrow$ \hilite{Model risk dominates signal risk.}
   \end{columns}
 \end{frame}
 
