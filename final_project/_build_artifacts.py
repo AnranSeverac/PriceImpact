@@ -500,14 +500,14 @@ def main():
     impact_lin = pi.compute_impact_states(panel.bins, panel.daily_stats,
                                            half_life_minutes=52.5, model_type="linear")
     feats_lin = pi.build_regression_features(impact_lin, panel.bins,
-                                              tau_bins=180, carry="daily")
+                                              tau_bins=6, carry="daily")
     stats_lin = pi.daily_sufficient_stats(feats_lin)
     base = pi.rolling_baseline(stats_lin, n_windows=10, offset=2)
     lam_lookup_daily = {"linear": pi.per_stock_lambda(base).to_dict()}
 
     print("Running sensitivity sweep...")
     sens_body, sens_df = run_sensitivity(panel, alphas, lam_lookup_daily,
-                                          H_star=52.5, TAU_BINS=180, RHO=0.05)
+                                          H_star=52.5, TAU_BINS=6, RHO=0.05)
     (TABLES / "sensitivity.tex").write_text(sens_body)
 
     print("Building slides.pptx...")

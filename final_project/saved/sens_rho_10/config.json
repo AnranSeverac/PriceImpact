@@ -4,7 +4,7 @@
   "strategy": "ow",
   "carry": "daily",
   "half_life_minutes": 52.5,
-  "tau_bins": 180,
+  "tau_bins": 6,
   "rho": 0.1,
   "h_alpha_bins": 1,
   "max_position_adv": 0.005,

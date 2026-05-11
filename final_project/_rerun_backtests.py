@@ -16,7 +16,7 @@ sys.path.insert(0, str(ROOT / "src"))
 import price_impact as pi  # noqa: E402
 
 H_STAR = 60.0
-TAU_BINS = 180
+TAU_BINS = 6
 RHO = 0.05
 
 

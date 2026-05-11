@@ -437,11 +437,11 @@
   \column{0.5\textwidth}
   \centering
   \includegraphics[width=\linewidth]{figures/cum_pnl_ow_daily.png}\\[2pt]
-  \footnotesize \texttt{ow\_daily}: \good{Sharpe +4.30}, \$105k net, \$12k impact
+  \footnotesize \texttt{ow\_daily}: \good{Sharpe +3.43}, \$107k net, \$11k impact
   \column{0.5\textwidth}
   \centering
   \includegraphics[width=\linewidth]{figures/cum_pnl_ow_multi.png}\\[2pt]
-  \footnotesize \texttt{ow\_multi}: Sharpe +1.61, \good{\$338k net}, \$98k impact
+  \footnotesize \texttt{ow\_multi}: Sharpe +2.05, \good{\$467k net}, impact $-\$39$k (carry credit)
   \end{columns}
 
   \vspace{0.6em}
@@ -449,9 +449,10 @@
   Net P\&L (blue solid) marks to the Waelbroeck-distorted $P_{\text{sim}}$;
   gross P\&L (orange dashed) marks to the undistorted mid.
   \begin{itemize}
-    \item \hilite{Daily-reset wins on Sharpe} -- consistent recycling, tight drawdowns ($-$\$11k vs $-$\$83k)
-    \item \hilite{Multi-day wins on dollars} -- $\sim$3$\times$ net P\&L from accumulated inventory, but $\sim$8$\times$ impact cost
-    \item Turnover essentially identical between carry modes (\$84M) -- only the \emph{cost attribution} changes
+    \item \hilite{Daily-reset wins on Sharpe} -- consistent recycling, tight drawdowns ($-$\$14k vs $-$\$88k)
+    \item \hilite{Multi-day wins on dollars} -- $\sim$4$\times$ net P\&L from accumulated inventory
+    \item Multi-day's net \emph{exceeds} its gross: a long position carried across sessions benefits from its own simulated impact contribution under the Waelbroeck mark-to-market -- \warn{the sign convention of "impact cost" needs care} when inventory persists
+    \item Turnover essentially identical between carry modes (\$84M)
   \end{itemize}
 \end{frame}
 
@@ -495,23 +496,23 @@
   \toprule
   Scenario & Sharpe & Net P\&L \\
   \midrule
-  Baseline                       & \good{+4.30} & \$105k \\
-  Wrong model (OW $\to$ AFS)     & \warn{$-$3.48} & \warn{$-$\$863k} \\
-  Signal delayed 1\,min          & \warn{$-$0.32} & $-$\$8k \\
-  $\rho = 0.01$                  & +0.45        & \$11k \\
-  $\rho = 0.10$                  & \good{+9.22} & \$251k \\
-  $H = 30$ min                   & +5.91        & \$205k \\
-  $H = 120$ min                  & +3.26        & \$53k \\
+  Baseline                       & \good{+3.43} & \$107k \\
+  Wrong model (OW $\to$ AFS)     & \warn{$-$2.92} & \warn{$-$\$1.41M} \\
+  Signal delayed 1\,min          & \warn{$-$0.02} & $-$\$1k \\
+  $\rho = 0.01$                  & +0.62        & \$20k \\
+  $\rho = 0.10$                  & \good{+7.37} & \$246k \\
+  $H = 30$ min                   & +5.22        & \$206k \\
+  $H = 120$ min                  & +2.51        & \$58k \\
   \bottomrule
   \end{tabular}
 
   \vspace{0.3em}
   \textbf{Takeaways}
   \begin{itemize}
-    \item \warn{Wrong model catastrophic} -- $-\$863$k
-    \item \warn{1-min delay flips the sign} -- $\alpha$ is short-horizon
-    \item $\rho$ scales Sharpe linearly: $\{0.01, 0.05, 0.10\}\!\to\!\{0.45, 4.30, 9.22\}$
-    \item $H$ is forgiving: $\pm 2\times$ stays in $[+3.3, +5.9]$
+    \item \warn{Wrong model catastrophic} -- $-\$1.41$M loss, $\sim\$1.54$M impact cost
+    \item \warn{1-min delay erases the edge} -- Sharpe collapses to $\approx 0$, $\alpha$ is short-horizon
+    \item $\rho$ scales Sharpe linearly: $\{0.01, 0.05, 0.10\}\!\to\!\{0.62, 3.43, 7.37\}$
+    \item $H$ is forgiving: $\pm 2\times$ stays in $[+2.5, +5.2]$
   \end{itemize}
 
   \column{0.52\textwidth}
@@ -525,7 +526,7 @@
 
   \vspace{0.1em}
   \footnotesize\itshape
-  Gross alpha-capture (orange dashed) still builds steadily -- the signal is real. But OW-sized positions under AFS impact pay \warn{${\sim}\$995$k} in impact cost, dwarfing gross P\&L. Net (blue) collapses early.
+  Gross alpha-capture (orange dashed) still builds steadily -- the signal is real. But OW-sized positions under AFS impact pay \warn{${\sim}\$1.54$M} in impact cost, dwarfing gross. Net (blue) collapses early and never recovers.
 
   \vspace{0.1em}
   $\Rightarrow$ \hilite{Model risk dominates signal risk.}
@@ -546,9 +547,7 @@
 
   \begin{block}{Enhancement 2 -- Multi-day carry backtest \hfill (\S2.3)}
     \footnotesize
-    Carrying $\bar I$ and inventory across sessions makes the cost of impact \emph{compound}: in the OW config, \hilite{impact cost $\$12$k $\to$ $\$98$k} ($\sim$8$\times$), gross P\&L \hilite{$3\times$ larger}.
-    Daily-reset wins on Sharpe (+4.30 vs +1.61); multi-day wins on absolute P\&L.
-    Engine handles both via a single flag; downstream code, TCA columns, and plotting are unchanged.
+    Carrying $\bar I$ and inventory across sessions \hilite{quadruples gross P\&L} ($\$118$k $\to$ $\$428$k) -- accumulated inventory rides the trend. Daily-reset wins on Sharpe (+3.43 vs +2.05) with tight drawdowns; multi-day wins on absolute dollars but introduces a subtle artefact: under Waelbroeck mark-to-market the carried long position benefits from its own simulated price displacement, producing a \warn{negative reported impact cost} ($-\$39$k). This is an accounting effect, not free money -- a clean impact-cost decomposition for multi-day inventory needs a different framing (e.g.\ implementation-shortfall against an arrival-price benchmark). The engine handles both modes via a single flag.
   \end{block}
 
   \vspace{0.4em}

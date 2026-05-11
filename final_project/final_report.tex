@@ -454,10 +454,10 @@ We run four configurations along two axes: model
 \toprule
 Config & Days & Sharpe & Net P\&L (\$) & Impact cost (\$) & Max DD (\$) & Max $|\lambda\bar I|$ & Win \% \\
 \midrule
-\texttt{ow\_daily} & 250 & +4.299 & 104,524 & 11,787 & -11,052 & 0.0001 & 66.0 \\
-\texttt{ow\_multi} & 250 & +1.608 & 337,586 & 97,813 & -82,818 & 0.0001 & 54.4 \\
-\texttt{afs\_daily} & 250 & +2.770 & 62,787 & 56,417 & -11,899 & 0.0019 & 58.0 \\
-\texttt{afs\_multi} & 250 & +1.732 & 352,558 & 129,999 & -73,841 & 0.0019 & 56.0 \\
+\texttt{ow\_daily} & 250 & +3.429 & 106{,}885 & 10{,}695 & -14{,}382 & 0.0001 & 65.6 \\
+\texttt{ow\_multi} & 250 & +2.053 & 467{,}360 & -38{,}917 & -88{,}257 & 0.0001 & 56.0 \\
+\texttt{afs\_daily} & 250 & +0.929 & 29{,}529 & 89{,}658 & -21{,}786 & 0.0020 & 54.8 \\
+\texttt{afs\_multi} & 250 & +2.091 & 456{,}808 & 21{,}878 & -80{,}250 & 0.0017 & 55.6 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -472,10 +472,10 @@ Config & Days & Sharpe & Net P\&L (\$) & Impact cost (\$) & Max DD (\$) & Max $|
 \toprule
 Config & Gross P\&L & Impact cost & Net P\&L & Predicted $\alpha$ & Realised $\alpha$ & Turnover \\
 \midrule
-\texttt{ow\_daily} & 116,311 & 11,787 & 104,524 & 44,596,330 & 116,311 & 84,003,822 \\
-\texttt{ow\_multi} & 435,399 & 97,813 & 337,586 & 44,596,811 & 435,399 & 84,020,323 \\
-\texttt{afs\_daily} & 119,205 & 56,417 & 62,787 & 44,649,726 & 119,205 & 86,576,189 \\
-\texttt{afs\_multi} & 482,557 & 129,999 & 352,558 & 44,649,729 & 482,557 & 86,577,598 \\
+\texttt{ow\_daily} & 117{,}580 & 10{,}695 & 106{,}885 & 44{,}517{,}365 & 117{,}580 & 83{,}185{,}017 \\
+\texttt{ow\_multi} & 428{,}443 & -38{,}917 & 467{,}360 & 44{,}547{,}434 & 428{,}443 & 83{,}712{,}089 \\
+\texttt{afs\_daily} & 119{,}187 & 89{,}658 & 29{,}529 & 44{,}649{,}423 & 119{,}187 & 86{,}528{,}734 \\
+\texttt{afs\_multi} & 478{,}685 & 21{,}878 & 456{,}808 & 44{,}649{,}536 & 478{,}685 & 86{,}566{,}056 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -499,8 +499,11 @@ returns.  Slippage components that would require fill-price detail
 \centering
 \includegraphics[width=0.85\textwidth]{figures/cum_pnl_ow_multi.png}
 \caption{Same, multi-day carry: $\bar I^{\text{ref}}$ and inventory persist
-         across sessions with overnight decay, so the cost of impact
-         compounds differently.}
+         across sessions with overnight decay. Net P\&L (blue) exceeds
+         gross (orange) because the Waelbroeck mark-to-market credits
+         the carried long position for its own simulated price
+         displacement -- an accounting artefact discussed in the
+         conclusion.}
 \end{figure}
 
 \begin{sigbox}
@@ -528,13 +531,13 @@ Two layers of stress tests.
 \toprule
 Scenario & Sharpe & Net P\&L (\$) & Impact cost (\$) \\
 \midrule
-Baseline OW (headline) & +4.299 & 104,524 & 11,787 \\
-Wrong model (fit OW, trade AFS) & -3.484 & -863,422 & 994,581 \\
-Signal delayed 1 min & -0.318 & -8,401 & 4,762 \\
-$\rho=0.01$ & +0.448 & 11,184 & 9,434 \\
-$\rho=0.10$ & +9.220 & 250,937 & 12,408 \\
-Half-life = 30 min & +5.906 & 205,254 & 12,035 \\
-Half-life = 120 min & +3.256 & 53,281 & 7,655 \\
+Baseline OW (headline) & +3.429 & 106{,}885 & 10{,}695 \\
+Wrong model (fit OW, trade AFS) & -2.916 & -1{,}406{,}121 & 1{,}538{,}813 \\
+Signal delayed 1 min & -0.019 & -620 & -1{,}563 \\
+$\rho=0.01$ & +0.624 & 20{,}000 & 1{,}996 \\
+$\rho=0.10$ & +7.371 & 246{,}379 & 13{,}067 \\
+Half-life = 30 min & +5.222 & 205{,}883 & 14{,}772 \\
+Half-life = 120 min & +2.508 & 58{,}191 & 3{,}296 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -573,10 +576,18 @@ estimator's behaviour is regime-correct.
         under data-scarcity stress.
   \item \textbf{Enhancement 2 --- multi-day carry backtest
         (\S\ref{sec:bt}).}  Carrying $\bar I$ and inventory across
-        sessions with overnight decay reveals how impact cost compounds
-        when positions are not flat at the close.  The flag is a single
-        \texttt{BacktestConfig} field; everything downstream
-        (P\&L, TCA, plots) handles it transparently.
+        sessions \emph{quadruples} gross P\&L ($\$118$k$\to\$428$k) as
+        the strategy accumulates long inventory through the trend.
+        Daily-reset wins on Sharpe (+3.43 vs +2.05) with tight
+        drawdowns; multi-day wins on absolute dollars but introduces a
+        subtle artefact: the Waelbroeck mark-to-market credits the
+        carried long position for its own price displacement,
+        producing a negative reported impact cost ($-\$39$k).  This is
+        an accounting effect, not free money; a clean impact-cost
+        decomposition for persistent inventory needs implementation-
+        shortfall against an arrival-price benchmark, which we did
+        not implement here.  The carry flag is a single
+        \texttt{BacktestConfig} field; downstream code is unchanged.
   \item \textbf{Honest limitations.}  The overnight-alpha extension
         (\S2.4 to-expand) and the extended-OW $\lambda(t)$ closed form
         (\S2.5 to-expand) are flagged but not implemented; the
